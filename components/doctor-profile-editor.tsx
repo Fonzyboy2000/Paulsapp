@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   ArrowLeft,
   Mail,
@@ -27,7 +26,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { Doctor, Hospital, Operation, CallNote } from "@/lib/data"
+import type { Doctor, Hospital, Operation } from "@/lib/data"
+import { getRecentCallNotes, getCallNotesForDoctor, loadPersistedCallNotes } from "@/lib/call-notes"
 
 interface DoctorProfileEditorProps {
   doctor: Doctor
@@ -35,8 +35,6 @@ interface DoctorProfileEditorProps {
   doctorOperations: (Operation | undefined)[]
   allHospitals: Hospital[]
   allOperations: Operation[]
-  callNotes: CallNote[]
-  totalCallNotes: number
 }
 
 export function DoctorProfileEditor({
@@ -45,8 +43,6 @@ export function DoctorProfileEditor({
   doctorOperations: initialOperations,
   allHospitals,
   allOperations,
-  callNotes,
-  totalCallNotes,
 }: DoctorProfileEditorProps) {
   const [doctor, setDoctor] = useState(initialDoctor)
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -56,9 +52,17 @@ export function DoctorProfileEditor({
   const [tempOperations, setTempOperations] = useState<string[]>([])
   const [newPreference, setNewPreference] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [callNotesRefresh, setCallNotesRefresh] = useState(0)
+
+  useEffect(() => {
+    loadPersistedCallNotes()
+    setCallNotesRefresh((prev) => prev + 1)
+  }, [])
 
   const doctorHospitals = doctor.hospitalIds.map((hId) => allHospitals.find((h) => h.id === hId)).filter(Boolean)
   const doctorOperations = doctor.operations.map((oId) => allOperations.find((o) => o.id === oId)).filter(Boolean)
+  const callNotes = getRecentCallNotes(doctor.id, 3)
+  const totalCallNotes = getCallNotesForDoctor(doctor.id).length
 
   const startEdit = (field: string, value: string | string[]) => {
     setEditingField(field)

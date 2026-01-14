@@ -1,7 +1,7 @@
 import type { CallNote } from "./data"
 
 // Sample call notes data - in production this would come from a database
-export const callNotes: CallNote[] = [
+const initialCallNotes: CallNote[] = [
   // Dr. Brenden Edwin Quintin Van Der Westhuizen (d1)
   {
     id: "cn1",
@@ -184,6 +184,42 @@ export const callNotes: CallNote[] = [
     createdBy: "Paul M.",
   },
 ]
+
+export let callNotes: CallNote[] = [...initialCallNotes]
+
+export function addCallNote(note: Omit<CallNote, "id">): CallNote {
+  const newNote: CallNote = {
+    ...note,
+    id: `cn${Date.now()}`,
+  }
+  callNotes = [newNote, ...callNotes]
+
+  // Persist to localStorage for client-side persistence
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("addedCallNotes")
+    const addedNotes = stored ? JSON.parse(stored) : []
+    addedNotes.push(newNote)
+    localStorage.setItem("addedCallNotes", JSON.stringify(addedNotes))
+  }
+
+  return newNote
+}
+
+export function loadPersistedCallNotes(): void {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("addedCallNotes")
+    if (stored) {
+      const addedNotes: CallNote[] = JSON.parse(stored)
+      // Merge with initial notes, avoiding duplicates
+      const existingIds = new Set(callNotes.map((n) => n.id))
+      addedNotes.forEach((note) => {
+        if (!existingIds.has(note.id)) {
+          callNotes.push(note)
+        }
+      })
+    }
+  }
+}
 
 // Helper function to get call notes for a specific doctor
 export function getCallNotesForDoctor(doctorId: string): CallNote[] {

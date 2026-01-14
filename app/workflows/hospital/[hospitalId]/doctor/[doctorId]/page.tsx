@@ -2,9 +2,10 @@ import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { hospitals, getDoctorById, getOperationsByDoctor } from "@/lib/data"
 import { notFound } from "next/navigation"
-import { ArrowLeft, ChevronRight, Clock, Activity } from "lucide-react"
+import { ArrowLeft, ChevronRight, Clock, Activity, Plus } from "lucide-react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 interface PageProps {
   params: Promise<{ hospitalId: string; doctorId: string }>
@@ -36,7 +37,7 @@ export default async function DoctorOperationsPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title={doctor.name} />
+      <Header />
 
       <main className="px-4 py-4">
         {/* Back Button */}
@@ -63,9 +64,17 @@ export default async function DoctorOperationsPage({ params }: PageProps) {
 
         {/* Operation Selection */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Select Procedure ({doctorOperations.length})
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Select Procedure ({doctorOperations.length})
+            </h2>
+            <Link href={`/workflows/hospital/${hospitalId}/doctor/${doctorId}/new-procedure`}>
+              <Button size="sm" className="gap-1">
+                <Plus className="h-4 w-4" />
+                New Procedure
+              </Button>
+            </Link>
+          </div>
           <div className="flex flex-col gap-3">
             {doctorOperations.map((operation) => (
               <Link

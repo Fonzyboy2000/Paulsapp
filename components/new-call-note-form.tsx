@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { type Doctor, doctors } from "@/lib/data"
+import { addCallNote } from "@/lib/call-notes"
 
 interface NewCallNoteFormProps {
   doctor: Doctor
@@ -29,12 +30,17 @@ export function NewCallNoteForm({ doctor }: NewCallNoteFormProps) {
 
     setIsSaving(true)
 
-    // In production, this would save to a database
-    // For now, we'll simulate saving and redirect back
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    addCallNote({
+      doctorId: selectedDoctorId,
+      date: date,
+      notes: notes.trim(),
+      createdBy: "Current User", // In production, this would come from auth
+    })
 
-    // Redirect back to selected doctor's profile
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
     router.push(`/doctors/${selectedDoctorId}`)
+    router.refresh()
   }
 
   return (

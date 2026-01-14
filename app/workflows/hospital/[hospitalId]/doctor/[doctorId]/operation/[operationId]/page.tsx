@@ -24,7 +24,7 @@ export default async function OperationDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title={operation.name} />
+      <Header />
 
       <main className="px-4 py-4">
         {/* Back Button */}

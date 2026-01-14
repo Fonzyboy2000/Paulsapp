@@ -78,7 +78,7 @@ export default function AdminHospitalsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title="Manage Hospitals" />
+      <Header />
 
       <main className="px-4 py-4">
         {/* Back Button */}

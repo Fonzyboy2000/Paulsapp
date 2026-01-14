@@ -2,6 +2,7 @@ import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { Building2, Users, Activity, Settings } from "lucide-react"
 import Link from "next/link"
+import { hospitals, doctors, operations } from "@/lib/data"
 
 export default function AdminPage() {
   const adminSections = [
@@ -10,27 +11,27 @@ export default function AdminPage() {
       description: "Add, edit, or remove hospitals",
       icon: Building2,
       href: "/admin/hospitals",
-      count: 5,
+      count: hospitals.length,
     },
     {
       title: "Manage Doctors",
       description: "Add doctors and assign to hospitals",
       icon: Users,
       href: "/admin/doctors",
-      count: 10,
+      count: doctors.length,
     },
     {
-      title: "Manage Operations",
-      description: "Configure surgical procedures",
+      title: "Manage Workflows",
+      description: "Create, Add, Delete workflow baseline templates",
       icon: Activity,
-      href: "/admin/operations",
-      count: 7,
+      href: "/admin/workflows",
+      count: operations.length,
     },
   ]
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title="Admin Panel" />
+      <Header />
 
       <main className="px-4 py-4">
         <div className="mb-6 rounded-xl bg-primary/10 p-4">
@@ -38,7 +39,7 @@ export default function AdminPage() {
             <Settings className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Administrator Access</span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Manage hospitals, doctors, and surgical procedures</p>
+          <p className="mt-1 text-sm text-muted-foreground">Manage hospitals, doctors, and surgical workflows</p>
         </div>
 
         <section>

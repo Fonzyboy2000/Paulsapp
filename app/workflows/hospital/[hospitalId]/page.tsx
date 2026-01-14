@@ -21,7 +21,7 @@ export default async function HospitalDoctorsPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title={hospital.name} />
+      <Header />
 
       <main className="px-4 py-4">
         {/* Back Button */}

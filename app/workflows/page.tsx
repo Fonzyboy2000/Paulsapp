@@ -9,7 +9,7 @@ export default function WorkflowsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header title="Surgical Workflows" />
+      <Header />
 
       <main className="px-4 py-4">
         <section>

@@ -16,6 +16,7 @@ import {
   LinkIcon,
   Plus,
   Package,
+  Camera,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,6 +39,7 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: Edit
   const [newDocName, setNewDocName] = useState("")
   const [showAddDoc, setShowAddDoc] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
     onUpdate(editedStep)
@@ -95,6 +97,28 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: Edit
     setEditedStep({ ...editedStep, attachments: newAttachments })
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
+    }
+  }
+
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const newAttachments: StepAttachment[] = [...(editedStep.attachments || [])]
+
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file)
+      newAttachments.push({
+        id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        type: "image",
+        url: url,
+      })
+    })
+
+    setEditedStep({ ...editedStep, attachments: newAttachments })
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ""
     }
   }
 
@@ -278,14 +302,25 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: Edit
               )}
 
               {/* Upload and Link buttons */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {/* File upload - documents */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
+                  accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"
                   className="hidden"
                   onChange={handleFileUpload}
+                />
+                {/* Image upload - with camera capture on mobile */}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImageCapture}
                 />
                 <Button
                   variant="outline"
@@ -295,6 +330,15 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: Edit
                 >
                   <Upload className="h-3.5 w-3.5 mr-1" />
                   Upload File
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-transparent"
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  <Camera className="h-3.5 w-3.5 mr-1" />
+                  Photo
                 </Button>
                 <Button
                   variant="outline"
