@@ -1,25 +1,73 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
-import { hospitals, getDoctorById, getOperationById, getProductById } from "@/lib/data"
-import { notFound } from "next/navigation"
+import { hospitals, getDoctorById, getProductById, type Operation } from "@/lib/data"
+import { getOperationByIdWithCustom } from "@/components/doctor-procedures-list"
 import { ArrowLeft, ChevronRight, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { EditableWorkflowSteps } from "@/components/editable-workflow-steps"
 
-interface PageProps {
-  params: Promise<{ hospitalId: string; doctorId: string; operationId: string }>
-}
+export default function OperationDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const [operation, setOperation] = useState<Operation | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-export default async function OperationDetailPage({ params }: PageProps) {
-  const { hospitalId, doctorId, operationId } = await params
+  const hospitalId = params.hospitalId as string
+  const doctorId = params.doctorId as string
+  const operationId = params.operationId as string
+
   const hospital = hospitals.find((h) => h.id === hospitalId)
   const doctor = getDoctorById(doctorId)
-  const operation = getOperationById(operationId)
+
+  useEffect(() => {
+    const foundOperation = getOperationByIdWithCustom(operationId)
+    if (foundOperation) {
+      setOperation(foundOperation)
+    }
+    setIsLoading(false)
+  }, [operationId])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <Header />
+        <main className="px-4 py-4">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 w-32 bg-muted rounded" />
+            <div className="h-32 bg-muted rounded-xl" />
+            <div className="h-64 bg-muted rounded-xl" />
+          </div>
+        </main>
+        <MobileNav />
+      </div>
+    )
+  }
 
   if (!hospital || !doctor || !operation) {
-    notFound()
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <Header />
+        <main className="px-4 py-4">
+          <div className="text-center py-12">
+            <h1 className="text-xl font-bold text-foreground mb-2">Not Found</h1>
+            <p className="text-muted-foreground mb-4">The requested procedure could not be found.</p>
+            <Link
+              href={`/workflows/hospital/${hospitalId}/doctor/${doctorId}`}
+              className="text-primary hover:underline"
+            >
+              Back to procedures
+            </Link>
+          </div>
+        </main>
+        <MobileNav />
+      </div>
+    )
   }
 
   return (

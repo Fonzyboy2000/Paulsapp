@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { operations, type Hospital, type Doctor, type Operation } from "@/lib/data"
@@ -18,6 +18,30 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 
+const CUSTOM_OPERATIONS_KEY = "depuy-custom-operations"
+
+export function getCustomOperations(): Operation[] {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(CUSTOM_OPERATIONS_KEY)
+  return stored ? JSON.parse(stored) : []
+}
+
+export function saveCustomOperation(operation: Operation) {
+  const existing = getCustomOperations()
+  const updated = [...existing.filter((op) => op.id !== operation.id), operation]
+  localStorage.setItem(CUSTOM_OPERATIONS_KEY, JSON.stringify(updated))
+}
+
+export function getOperationByIdWithCustom(operationId: string): Operation | undefined {
+  // First check static operations
+  const staticOp = operations.find((op) => op.id === operationId)
+  if (staticOp) return staticOp
+
+  // Then check custom operations in localStorage
+  const customOps = getCustomOperations()
+  return customOps.find((op) => op.id === operationId)
+}
+
 interface DoctorProceduresListProps {
   hospital: Hospital
   doctor: Doctor
@@ -26,10 +50,23 @@ interface DoctorProceduresListProps {
 
 export function DoctorProceduresList({ hospital, doctor, doctorOperations }: DoctorProceduresListProps) {
   const router = useRouter()
-  const [localOperations, setLocalOperations] = useState(doctorOperations)
+  const [localOperations, setLocalOperations] = useState<Operation[]>(doctorOperations)
+
+  useEffect(() => {
+    const customOps = getCustomOperations()
+    const doctorCustomOps = customOps.filter((op) => op.id.includes(`-${doctor.id}`))
+    if (doctorCustomOps.length > 0) {
+      setLocalOperations((prev) => {
+        const newOps = doctorCustomOps.filter((custom) => !prev.some((p) => p.id === custom.id))
+        return [...prev, ...newOps]
+      })
+    }
+  }, [doctor.id])
 
   // Get all template operations (baseline workflows from admin)
-  const templateOperations = operations.filter((op) => !localOperations.some((local) => local.id === op.id))
+  const templateOperations = operations.filter(
+    (op) => !localOperations.some((local) => local.id === op.id || local.id.startsWith(`${op.id}-`)),
+  )
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -48,11 +85,14 @@ export function DoctorProceduresList({ hospital, doctor, doctorOperations }: Doc
     const template = operations.find((op) => op.id === templateId)
     if (template) {
       // Clone the template for this doctor
-      const newOperation = {
+      const newOperation: Operation = {
         ...template,
         id: `${template.id}-${doctor.id}`, // Create unique ID for doctor's version
         steps: template.steps.map((step) => ({ ...step })),
       }
+
+      saveCustomOperation(newOperation)
+
       setLocalOperations([...localOperations, newOperation])
       // Navigate to the new operation for editing
       router.push(`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/operation/${newOperation.id}`)
