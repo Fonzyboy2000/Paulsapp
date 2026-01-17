@@ -36,6 +36,7 @@ export interface Operation {
   steps: OperationStep[]
   estimatedDuration: string
   productsUsed: string[]
+  metaTags?: string[] // Added metaTags field for procedure tagging
 }
 
 export interface StepAttachment {
@@ -378,6 +379,7 @@ export const operations: Operation[] = [
     description: "Total knee arthroplasty for end-stage knee arthritis",
     estimatedDuration: "90-120 min",
     productsUsed: ["p1", "p5"],
+    metaTags: ["TKA", "Total Knee Replacement", "Arthroplasty"],
     steps: [
       {
         order: 1,
@@ -501,6 +503,7 @@ export const operations: Operation[] = [
     description: "Total hip arthroplasty for hip arthritis or fracture",
     estimatedDuration: "90-120 min",
     productsUsed: ["p1", "p5", "p6"],
+    metaTags: ["THA", "Total Hip Replacement", "Arthroplasty"],
     steps: [
       { order: 1, description: "Patient positioning (lateral or supine)", products: [], duration: "10 min" },
       { order: 2, description: "Surgical approach and exposure", products: ["p5"], duration: "15 min" },
@@ -518,6 +521,7 @@ export const operations: Operation[] = [
     description: "Revision of failed total hip arthroplasty",
     estimatedDuration: "180-240 min",
     productsUsed: ["p1", "p5", "p6"],
+    metaTags: ["Hip Revision", "Arthroplasty Revision"],
     steps: [
       { order: 1, description: "Component removal planning and imaging review", products: [], duration: "15 min" },
       { order: 2, description: "Extended exposure and component removal", products: ["p5"], duration: "45 min" },
@@ -535,6 +539,7 @@ export const operations: Operation[] = [
     description: "Revision of failed total knee arthroplasty",
     estimatedDuration: "150-210 min",
     productsUsed: ["p1", "p5"],
+    metaTags: ["Knee Revision", "Arthroplasty Revision"],
     steps: [
       { order: 1, description: "Preoperative planning and component assessment", products: [], duration: "15 min" },
       { order: 2, description: "Extended exposure", products: ["p5"], duration: "20 min" },
@@ -551,6 +556,7 @@ export const operations: Operation[] = [
     description: "Trochanteric Femoral Nail Advanced for proximal femur fractures",
     estimatedDuration: "60-90 min",
     productsUsed: ["p3", "p5", "p7"],
+    metaTags: ["Femur Fracture", "Hip Fracture", "Intramedullary Nailing", "Trauma"],
     steps: [
       { order: 1, description: "Patient positioning on fracture table", products: [], duration: "15 min" },
       { order: 2, description: "Entry point and guidewire placement", products: ["p5"], duration: "10 min" },
@@ -568,6 +574,7 @@ export const operations: Operation[] = [
     description: "Intramedullary nailing for tibial shaft fractures",
     estimatedDuration: "60-90 min",
     productsUsed: ["p3", "p5"],
+    metaTags: ["Tibia Fracture", "Intramedullary Nailing", "Trauma"],
     steps: [
       { order: 1, description: "Patient positioning and fracture reduction", products: [], duration: "15 min" },
       { order: 2, description: "Entry point (infrapatellar or suprapatellar)", products: ["p5"], duration: "10 min" },
@@ -584,6 +591,7 @@ export const operations: Operation[] = [
     description: "Pelvic fracture fixation",
     estimatedDuration: "120-240 min",
     productsUsed: ["p3", "p5", "p7"],
+    metaTags: ["Pelvis Fracture", "Trauma", "Fixation"],
     steps: [
       { order: 1, description: "Preoperative planning and approach selection", products: [], duration: "20 min" },
       { order: 2, description: "Surgical exposure", products: ["p5"], duration: "30 min" },

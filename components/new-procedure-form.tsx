@@ -24,7 +24,32 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { StepAttachment, StepSet } from "@/lib/data"
+import type { StepAttachment, StepSet, Operation } from "@/lib/data"
+
+const CUSTOM_OPERATIONS_KEY = "depuy-custom-operations"
+const DOCTOR_OPERATIONS_KEY = "depuy-doctor-operations"
+
+function getCustomOperations(): Operation[] {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(CUSTOM_OPERATIONS_KEY)
+  return stored ? JSON.parse(stored) : []
+}
+
+function saveCustomOperation(operation: Operation) {
+  const existing = getCustomOperations()
+  const updated = [...existing.filter((op) => op.id !== operation.id), operation]
+  localStorage.setItem(CUSTOM_OPERATIONS_KEY, JSON.stringify(updated))
+}
+
+function addOperationToDoctor(doctorId: string, operationId: string) {
+  const stored = localStorage.getItem(DOCTOR_OPERATIONS_KEY)
+  const allDoctorOps = stored ? JSON.parse(stored) : {}
+  const currentOps = allDoctorOps[doctorId] || []
+  if (!currentOps.includes(operationId)) {
+    allDoctorOps[doctorId] = [...currentOps, operationId]
+    localStorage.setItem(DOCTOR_OPERATIONS_KEY, JSON.stringify(allDoctorOps))
+  }
+}
 
 interface NewProcedureFormProps {
   hospitalId: string
@@ -66,8 +91,6 @@ export function NewProcedureForm({ hospitalId, doctorId, hospitalName, doctorNam
   const [showLinkModal, setShowLinkModal] = useState<number | null>(null)
   const [linkName, setLinkName] = useState("")
   const [linkUrl, setLinkUrl] = useState("")
-
-  // ... existing code for addStep, removeStep, updateStep, addSet, updateSet, removeSet ...
 
   const addStep = () => {
     setSteps([
@@ -216,8 +239,10 @@ export function NewProcedureForm({ hospitalId, doctorId, hospitalName, doctorNam
   }
 
   const handleSubmit = () => {
-    const newOperation = {
-      id: `op-${Date.now()}`,
+    const newOperationId = `op-${Date.now()}-${doctorId}`
+
+    const newOperation: Operation = {
+      id: newOperationId,
       name,
       category,
       description,
@@ -229,17 +254,19 @@ export function NewProcedureForm({ hospitalId, doctorId, hospitalName, doctorNam
       productsUsed: [],
     }
 
-    console.log("[v0] New procedure created:", newOperation)
-    alert("Procedure created successfully!")
-    router.push(`/workflows/hospital/${hospitalId}/doctor/${doctorId}`)
+    // Save to localStorage so it persists
+    saveCustomOperation(newOperation)
+
+    addOperationToDoctor(doctorId, newOperationId)
+
+    // Navigate to the new procedure page
+    router.push(`/workflows/hospital/${hospitalId}/doctor/${doctorId}/operation/${newOperationId}`)
   }
 
   const durations = ["5 min", "10 min", "15 min", "20 min", "30 min", "45 min", "60 min"]
 
   return (
     <div className="space-y-6">
-      {/* ... existing code for Back Button, Breadcrumb, Procedure Details Card ... */}
-
       {/* Back Button */}
       <Link
         href={`/workflows/hospital/${hospitalId}/doctor/${doctorId}`}
@@ -465,7 +492,7 @@ export function NewProcedureForm({ hospitalId, doctorId, hospitalName, doctorNam
                     />
                     <Button variant="outline" size="sm" onClick={() => setShowLinkModal(stepIndex)} className="gap-1">
                       <LinkIcon className="h-3 w-3" />
-                      Add Link
+                      Link
                     </Button>
                     <Button
                       variant="outline"

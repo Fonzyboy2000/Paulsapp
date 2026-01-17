@@ -29,6 +29,29 @@ import { Checkbox } from "@/components/ui/checkbox"
 import type { Doctor, Hospital, Operation } from "@/lib/data"
 import { getRecentCallNotes, getCallNotesForDoctor, loadPersistedCallNotes } from "@/lib/call-notes"
 
+const CUSTOM_OPERATIONS_KEY = "depuy-custom-operations"
+const DOCTOR_OPERATIONS_KEY = "depuy-doctor-operations"
+
+function getCustomOperations(): Operation[] {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(CUSTOM_OPERATIONS_KEY)
+  return stored ? JSON.parse(stored) : []
+}
+
+function getDoctorOperations(doctorId: string): string[] {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(DOCTOR_OPERATIONS_KEY)
+  const allDoctorOps = stored ? JSON.parse(stored) : {}
+  return allDoctorOps[doctorId] || []
+}
+
+function saveDoctorOperations(doctorId: string, operationIds: string[]) {
+  const stored = localStorage.getItem(DOCTOR_OPERATIONS_KEY)
+  const allDoctorOps = stored ? JSON.parse(stored) : {}
+  allDoctorOps[doctorId] = operationIds
+  localStorage.setItem(DOCTOR_OPERATIONS_KEY, JSON.stringify(allDoctorOps))
+}
+
 interface DoctorProfileEditorProps {
   doctor: Doctor
   doctorHospitals: (Hospital | undefined)[]
@@ -53,14 +76,33 @@ export function DoctorProfileEditor({
   const [newPreference, setNewPreference] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [callNotesRefresh, setCallNotesRefresh] = useState(0)
+  const [availableOperations, setAvailableOperations] = useState<Operation[]>(allOperations)
+  const [doctorCustomOpIds, setDoctorCustomOpIds] = useState<string[]>([])
 
   useEffect(() => {
     loadPersistedCallNotes()
     setCallNotesRefresh((prev) => prev + 1)
-  }, [])
+
+    const customOps = getCustomOperations()
+    const doctorCustomOps = customOps.filter((op) => op.id.includes(`-${initialDoctor.id}`))
+    if (customOps.length > 0 || doctorCustomOps.length > 0) {
+      const baselineOps = allOperations
+      const allAvailable = [...baselineOps, ...doctorCustomOps]
+      setAvailableOperations(allAvailable)
+      setDoctorCustomOpIds(doctorCustomOps.map((op) => op.id))
+    }
+
+    const savedDocOps = getDoctorOperations(initialDoctor.id)
+    if (savedDocOps.length > 0) {
+      const mergedOps = [...new Set([...initialDoctor.operations, ...savedDocOps])]
+      setDoctor((prev) => ({ ...prev, operations: mergedOps }))
+    }
+  }, [initialDoctor.id, allOperations, initialDoctor.operations])
 
   const doctorHospitals = doctor.hospitalIds.map((hId) => allHospitals.find((h) => h.id === hId)).filter(Boolean)
-  const doctorOperations = doctor.operations.map((oId) => allOperations.find((o) => o.id === oId)).filter(Boolean)
+  const doctorOperations = doctor.operations
+    .map((oId) => availableOperations.find((o) => o.id === oId))
+    .filter(Boolean) as Operation[]
   const callNotes = getRecentCallNotes(doctor.id, 3)
   const totalCallNotes = getCallNotesForDoctor(doctor.id).length
 
@@ -95,6 +137,7 @@ export function DoctorProfileEditor({
       setDoctor({ ...doctor, hospitalIds: tempHospitalIds })
     } else if (field === "operations") {
       setDoctor({ ...doctor, operations: tempOperations })
+      saveDoctorOperations(doctor.id, tempOperations)
     } else {
       setDoctor({ ...doctor, [field]: tempValue })
     }
@@ -183,7 +226,6 @@ export function DoctorProfileEditor({
 
   return (
     <main className="px-4 py-4">
-      {/* Back Button */}
       <Link
         href="/doctors"
         className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -192,10 +234,8 @@ export function DoctorProfileEditor({
         Back to Doctors
       </Link>
 
-      {/* Doctor Header Card */}
       <div className="mb-6 rounded-xl border border-border bg-card p-6">
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left gap-4">
-          {/* Photo - Editable */}
           <div className="relative group">
             <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-primary/20">
               {doctor.imageUrl ? (
@@ -215,7 +255,6 @@ export function DoctorProfileEditor({
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </div>
 
-          {/* Name and Specialty */}
           <div className="flex-1">
             {editingField === "name" ? (
               <div className="flex items-center gap-2 mb-1">
@@ -283,7 +322,6 @@ export function DoctorProfileEditor({
         </div>
       </div>
 
-      {/* Contact Information */}
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Contact Information
@@ -311,7 +349,6 @@ export function DoctorProfileEditor({
         </div>
       </section>
 
-      {/* Hospitals - Editable */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Hospitals</h2>
@@ -383,7 +420,6 @@ export function DoctorProfileEditor({
         )}
       </section>
 
-      {/* Preferences - Editable */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Preferences</h2>
@@ -456,7 +492,6 @@ export function DoctorProfileEditor({
         )}
       </section>
 
-      {/* Notes - Editable */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Notes</h2>
@@ -501,7 +536,6 @@ export function DoctorProfileEditor({
         )}
       </section>
 
-      {/* Call Notes */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Call Notes</h2>
@@ -558,7 +592,6 @@ export function DoctorProfileEditor({
         )}
       </section>
 
-      {/* Operations - Editable */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Operations Performed</h2>
@@ -577,7 +610,8 @@ export function DoctorProfileEditor({
 
         {editingField === "operations" ? (
           <div className="rounded-xl border border-border bg-card p-4">
-            <div className="max-h-60 overflow-y-auto space-y-2">
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Baseline Templates</p>
+            <div className="max-h-48 overflow-y-auto space-y-2 mb-4">
               {allOperations.map((operation) => (
                 <label
                   key={operation.id}
@@ -600,6 +634,40 @@ export function DoctorProfileEditor({
                 </label>
               ))}
             </div>
+
+            {doctorCustomOpIds.length > 0 && (
+              <>
+                <p className="text-xs text-muted-foreground mb-2 font-medium border-t border-border pt-3">
+                  Custom Procedures (Doctor Specific)
+                </p>
+                <div className="max-h-32 overflow-y-auto space-y-2">
+                  {availableOperations
+                    .filter((op) => doctorCustomOpIds.includes(op.id))
+                    .map((operation) => (
+                      <label
+                        key={operation.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 cursor-pointer bg-primary/5"
+                      >
+                        <Checkbox
+                          checked={tempOperations.includes(operation.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setTempOperations([...tempOperations, operation.id])
+                            } else {
+                              setTempOperations(tempOperations.filter((id) => id !== operation.id))
+                            }
+                          }}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{operation.name}</p>
+                          <p className="text-xs text-muted-foreground">{operation.category} (custom)</p>
+                        </div>
+                      </label>
+                    ))}
+                </div>
+              </>
+            )}
+
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-border">
               <Button variant="outline" size="sm" onClick={cancelEdit}>
                 Cancel
@@ -615,32 +683,32 @@ export function DoctorProfileEditor({
               doctorOperations.map((operation) => {
                 const surgicalHospital = doctorHospitals.find((h) => h?.hasSurgicalWorkflows)
                 const workflowLink = surgicalHospital
-                  ? `/workflows/hospital/${surgicalHospital.id}/doctor/${doctor.id}/operation/${operation!.id}`
+                  ? `/workflows/hospital/${surgicalHospital.id}/doctor/${doctor.id}/operation/${operation.id}`
                   : null
 
                 return (
                   <div
-                    key={operation!.id}
+                    key={operation.id}
                     className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                       <ClipboardList className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-card-foreground">{operation!.name}</p>
-                      <p className="text-sm text-muted-foreground">{operation!.estimatedDuration}</p>
+                      <p className="font-medium text-card-foreground">{operation.name}</p>
+                      <p className="text-sm text-muted-foreground">{operation.estimatedDuration}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          operation!.category === "joint"
+                          operation.category === "joint"
                             ? "bg-primary/10 text-primary"
-                            : operation!.category === "trauma"
+                            : operation.category === "trauma"
                               ? "bg-chart-3/10 text-chart-3"
                               : "bg-accent text-muted-foreground"
                         }`}
                       >
-                        {operation!.category}
+                        {operation.category}
                       </span>
                       {workflowLink && (
                         <Link href={workflowLink}>

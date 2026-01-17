@@ -4,21 +4,13 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { operations, type Hospital, type Doctor, type Operation } from "@/lib/data"
-import { ArrowLeft, ChevronRight, Clock, Activity, Plus, ChevronDown } from "lucide-react"
+import { ArrowLeft, ChevronRight, Clock, Activity, Plus } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 
 const CUSTOM_OPERATIONS_KEY = "depuy-custom-operations"
+const DOCTOR_OPERATIONS_KEY = "depuy-doctor-operations"
 
 export function getCustomOperations(): Operation[] {
   if (typeof window === "undefined") return []
@@ -30,6 +22,20 @@ export function saveCustomOperation(operation: Operation) {
   const existing = getCustomOperations()
   const updated = [...existing.filter((op) => op.id !== operation.id), operation]
   localStorage.setItem(CUSTOM_OPERATIONS_KEY, JSON.stringify(updated))
+}
+
+function saveDoctorOperations(doctorId: string, operationIds: string[]) {
+  const stored = localStorage.getItem(DOCTOR_OPERATIONS_KEY)
+  const allDoctorOps = stored ? JSON.parse(stored) : {}
+  allDoctorOps[doctorId] = operationIds
+  localStorage.setItem(DOCTOR_OPERATIONS_KEY, JSON.stringify(allDoctorOps))
+}
+
+function getDoctorOperations(doctorId: string): string[] {
+  if (typeof window === "undefined") return []
+  const stored = localStorage.getItem(DOCTOR_OPERATIONS_KEY)
+  const allDoctorOps = stored ? JSON.parse(stored) : {}
+  return allDoctorOps[doctorId] || []
 }
 
 export function getOperationByIdWithCustom(operationId: string): Operation | undefined {
@@ -49,24 +55,40 @@ interface DoctorProceduresListProps {
 }
 
 export function DoctorProceduresList({ hospital, doctor, doctorOperations }: DoctorProceduresListProps) {
-  const router = useRouter()
   const [localOperations, setLocalOperations] = useState<Operation[]>(doctorOperations)
 
   useEffect(() => {
+    // Load custom operations for this doctor
     const customOps = getCustomOperations()
     const doctorCustomOps = customOps.filter((op) => op.id.includes(`-${doctor.id}`))
-    if (doctorCustomOps.length > 0) {
-      setLocalOperations((prev) => {
-        const newOps = doctorCustomOps.filter((custom) => !prev.some((p) => p.id === custom.id))
-        return [...prev, ...newOps]
-      })
-    }
-  }, [doctor.id])
 
-  // Get all template operations (baseline workflows from admin)
-  const templateOperations = operations.filter(
-    (op) => !localOperations.some((local) => local.id === op.id || local.id.startsWith(`${op.id}-`)),
-  )
+    // Load saved doctor operation IDs
+    const savedOpIds = getDoctorOperations(doctor.id)
+
+    // Build full list: baseline ops assigned to doctor + custom ops
+    const baselineOps = doctorOperations
+    const allDoctorOps = [...baselineOps]
+
+    // Add custom ops that aren't already in the list
+    doctorCustomOps.forEach((customOp) => {
+      if (!allDoctorOps.some((op) => op.id === customOp.id)) {
+        allDoctorOps.push(customOp)
+      }
+    })
+
+    // Also include any baseline ops from savedOpIds that aren't already included
+    savedOpIds.forEach((opId) => {
+      const baselineOp = operations.find((op) => op.id === opId)
+      if (baselineOp && !allDoctorOps.some((op) => op.id === opId)) {
+        allDoctorOps.push(baselineOp)
+      }
+    })
+
+    setLocalOperations(allDoctorOps)
+
+    const allOpIds = allDoctorOps.map((op) => op.id)
+    saveDoctorOperations(doctor.id, allOpIds)
+  }, [doctor.id, doctorOperations])
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -80,36 +102,6 @@ export function DoctorProceduresList({ hospital, doctor, doctorOperations }: Doc
         return "bg-secondary text-secondary-foreground"
     }
   }
-
-  const handleAddFromTemplate = (templateId: string) => {
-    const template = operations.find((op) => op.id === templateId)
-    if (template) {
-      // Clone the template for this doctor
-      const newOperation: Operation = {
-        ...template,
-        id: `${template.id}-${doctor.id}`, // Create unique ID for doctor's version
-        steps: template.steps.map((step) => ({ ...step })),
-      }
-
-      saveCustomOperation(newOperation)
-
-      setLocalOperations([...localOperations, newOperation])
-      // Navigate to the new operation for editing
-      router.push(`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/operation/${newOperation.id}`)
-    }
-  }
-
-  // Group templates by category
-  const templatesByCategory = templateOperations.reduce(
-    (acc, op) => {
-      if (!acc[op.category]) {
-        acc[op.category] = []
-      }
-      acc[op.category].push(op)
-      return acc
-    },
-    {} as Record<string, Operation[]>,
-  )
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -144,81 +136,60 @@ export function DoctorProceduresList({ hospital, doctor, doctorOperations }: Doc
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Select Procedure ({localOperations.length})
             </h2>
-            <div className="flex items-center gap-2">
-              {/* Template dropdown - green with + icon */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white">
-                    <Plus className="h-4 w-4" />
-                    From Templates
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[300px] max-h-[400px] overflow-y-auto">
-                  {Object.keys(templatesByCategory).length === 0 ? (
-                    <DropdownMenuItem disabled>No templates available</DropdownMenuItem>
-                  ) : (
-                    Object.entries(templatesByCategory).map(([category, ops]) => (
-                      <div key={category}>
-                        <DropdownMenuLabel className="capitalize">{category}</DropdownMenuLabel>
-                        {ops.map((op) => (
-                          <DropdownMenuItem
-                            key={op.id}
-                            onClick={() => handleAddFromTemplate(op.id)}
-                            className="flex flex-col items-start gap-1 cursor-pointer"
-                          >
-                            <span className="font-medium">{op.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {op.steps.length} steps - {op.estimatedDuration}
-                            </span>
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                      </div>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* New Procedure button - primary/red */}
-              <Link href={`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/new-procedure`}>
-                <Button size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" />
-                  New Procedure
-                </Button>
-              </Link>
-            </div>
+            <Link href={`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/new-procedure`}>
+              <Button size="sm" className="gap-1">
+                <Plus className="h-4 w-4" />
+                New Procedure
+              </Button>
+            </Link>
           </div>
 
           <div className="flex flex-col gap-3">
-            {localOperations.map((operation) => (
-              <Link
-                key={operation.id}
-                href={`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/operation/${operation.id}`}
-                className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Activity className="h-5 w-5 text-primary" />
+            {localOperations.length > 0 ? (
+              localOperations.map((operation) => (
+                <Link
+                  key={operation.id}
+                  href={`/workflows/hospital/${hospital.id}/doctor/${doctor.id}/operation/${operation.id}`}
+                  className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md active:scale-[0.99]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Activity className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-card-foreground">{operation.name}</h3>
+                          {operation.id.includes(`-${doctor.id}`) && (
+                            <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                              Custom
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{operation.description}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-card-foreground">{operation.name}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{operation.description}</p>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0 mt-2" />
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <Badge className={getCategoryColor(operation.category)}>{operation.category}</Badge>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{operation.estimatedDuration}</span>
                     </div>
+                    <span className="text-xs text-muted-foreground">{operation.steps.length} steps</span>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0 mt-2" />
-                </div>
-                <div className="mt-3 flex items-center gap-3">
-                  <Badge className={getCategoryColor(operation.category)}>{operation.category}</Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{operation.estimatedDuration}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{operation.steps.length} steps</span>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No procedures assigned to this doctor.</p>
+                <p className="text-sm mt-1">
+                  Create a new procedure or assign baseline templates from the doctor profile.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </main>

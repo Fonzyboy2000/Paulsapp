@@ -30,9 +30,10 @@ interface EditableWorkflowStepProps {
   index: number
   totalSteps: number
   onUpdate: (updatedStep: OperationStep) => void
+  onDelete?: () => void
 }
 
-export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: EditableWorkflowStepProps) {
+export function EditableWorkflowStep({ step, index, totalSteps, onUpdate, onDelete }: EditableWorkflowStepProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedStep, setEditedStep] = useState<OperationStep>(step)
   const [newDocUrl, setNewDocUrl] = useState("")
@@ -179,16 +180,23 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate }: Edit
       </div>
 
       <div className="relative">
-        {/* Edit button */}
+        {/* Edit and Delete buttons */}
         {!isEditing && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute -right-2 -top-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
+          <div className="absolute -right-2 -top-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsEditing(true)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         )}
 
         {isEditing ? (

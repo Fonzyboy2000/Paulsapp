@@ -22,6 +22,16 @@ export function EditableWorkflowSteps({ operationId, initialSteps }: EditableWor
     // In a real app, you would save to a database here
   }
 
+  const handleDeleteStep = (index: number) => {
+    const newSteps = steps.filter((_, i) => i !== index)
+    // Re-order the remaining steps
+    const reorderedSteps = newSteps.map((step, i) => ({
+      ...step,
+      order: i + 1,
+    }))
+    setSteps(reorderedSteps)
+  }
+
   const handleAddStep = () => {
     const newStep: OperationStep = {
       order: steps.length + 1,
@@ -53,6 +63,7 @@ export function EditableWorkflowSteps({ operationId, initialSteps }: EditableWor
               index={index}
               totalSteps={steps.length}
               onUpdate={(updatedStep) => handleUpdateStep(index, updatedStep)}
+              onDelete={() => handleDeleteStep(index)}
             />
           ))}
         </div>

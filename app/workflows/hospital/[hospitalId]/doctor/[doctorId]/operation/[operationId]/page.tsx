@@ -4,13 +4,15 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
-import { hospitals, getDoctorById, getProductById, type Operation } from "@/lib/data"
+import { hospitals, getDoctorById, type Operation } from "@/lib/data"
 import { getOperationByIdWithCustom } from "@/components/doctor-procedures-list"
 import { ArrowLeft, ChevronRight, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { EditableWorkflowSteps } from "@/components/editable-workflow-steps"
+import { EditableProductsUsed } from "@/components/editable-products-used"
+import { EditableMetaTags } from "@/components/editable-meta-tags"
 
 export default function OperationDetailPage() {
   const params = useParams()
@@ -96,7 +98,10 @@ export default function OperationDetailPage() {
         {/* Operation Info */}
         <Card className="mb-4">
           <CardContent className="pt-4">
-            <h1 className="text-xl font-bold text-card-foreground mb-2">{operation.name}</h1>
+            <div className="flex flex-col gap-2 mb-2">
+              <h1 className="text-xl font-bold text-card-foreground">{operation.name}</h1>
+              <EditableMetaTags operationId={operationId} initialTags={operation.metaTags || [operation.category]} />
+            </div>
             <p className="text-sm text-muted-foreground mb-3">{operation.description}</p>
             <div className="flex items-center gap-3 text-sm">
               <div className="flex items-center gap-1 text-muted-foreground">
@@ -132,27 +137,7 @@ export default function OperationDetailPage() {
         <EditableWorkflowSteps operationId={operationId} initialSteps={operation.steps} />
 
         {/* Products Used */}
-        {operation.productsUsed.length > 0 && (
-          <Card className="mt-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Products Used</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {operation.productsUsed.map((productId) => {
-                  const product = getProductById(productId)
-                  return product ? (
-                    <Link key={productId} href={`/products/${productId}`}>
-                      <Badge variant="secondary" className="hover:bg-secondary/80 cursor-pointer">
-                        {product.name}
-                      </Badge>
-                    </Link>
-                  ) : null
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <EditableProductsUsed operationId={operationId} initialProductIds={operation.productsUsed} />
       </main>
 
       <MobileNav />
