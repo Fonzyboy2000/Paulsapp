@@ -39,6 +39,7 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate, onDele
   const [newDocUrl, setNewDocUrl] = useState("")
   const [newDocName, setNewDocName] = useState("")
   const [showAddDoc, setShowAddDoc] = useState(false)
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -171,6 +172,34 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate, onDele
 
   return (
     <div className="relative pl-8 pb-4 last:pb-0 group">
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-2 -right-2 h-10 w-10 rounded-full bg-white text-black hover:bg-gray-200 z-10 shadow-lg"
+              onClick={(e) => {
+                e.stopPropagation()
+                setPreviewImage(null)
+              }}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <img
+              src={previewImage.url || "/placeholder.svg"}
+              alt={previewImage.name}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="text-white text-center mt-2 text-sm">{previewImage.name}</p>
+          </div>
+        </div>
+      )}
+
       {/* Timeline line */}
       {index < totalSteps - 1 && <div className="absolute left-[11px] top-7 bottom-0 w-0.5 bg-border" />}
 
@@ -467,18 +496,29 @@ export function EditableWorkflowStep({ step, index, totalSteps, onUpdate, onDele
               <div className="mt-2 space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Attachments:</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {step.attachments.map((attachment) => (
-                    <a
-                      key={attachment.id}
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs hover:bg-muted/80 transition-colors"
-                    >
-                      {getFileIcon(attachment.type)}
-                      <span className="max-w-[120px] truncate">{attachment.name}</span>
-                    </a>
-                  ))}
+                  {step.attachments.map((attachment) =>
+                    attachment.type === "image" ? (
+                      <button
+                        key={attachment.id}
+                        onClick={() => setPreviewImage({ url: attachment.url, name: attachment.name })}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs hover:bg-muted/80 transition-colors cursor-pointer"
+                      >
+                        {getFileIcon(attachment.type)}
+                        <span className="max-w-[120px] truncate">{attachment.name}</span>
+                      </button>
+                    ) : (
+                      <a
+                        key={attachment.id}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs hover:bg-muted/80 transition-colors"
+                      >
+                        {getFileIcon(attachment.type)}
+                        <span className="max-w-[120px] truncate">{attachment.name}</span>
+                      </a>
+                    ),
+                  )}
                 </div>
               </div>
             )}
